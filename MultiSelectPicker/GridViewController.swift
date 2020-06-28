@@ -23,6 +23,7 @@ class GridViewController: UICollectionViewController {
     var fetchResult: PHFetchResult<PHAsset>!
     var assetCollection: PHAssetCollection!
     var availableWidth: CGFloat = 0
+    var selectedImages: [PHAsset] = [PHAsset]()
     
     @IBOutlet weak var collectionViewFlowLayout: UICollectionViewFlowLayout!
     @IBOutlet var doneBtnItem: UIBarButtonItem!
@@ -34,6 +35,7 @@ class GridViewController: UICollectionViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
+        collectionView.allowsMultipleSelection = true
         resetCachedAssets()
         PHPhotoLibrary.shared().register(self)
 
@@ -67,18 +69,17 @@ class GridViewController: UICollectionViewController {
         let scale = UIScreen.main.scale
         let cellSize = collectionViewFlowLayout.itemSize
         thumbnailSize = CGSize(width: cellSize.width * scale, height: cellSize.height * scale)
-        
-        // Add a button to the navigation bar if the asset collection supports adding content.
-        if assetCollection == nil {
-            navigationItem.rightBarButtonItem = doneBtnItem
-        } else {
-            navigationItem.rightBarButtonItem = nil
-        }
+
+        navigationItem.rightBarButtonItem = doneBtnItem
     }
     
     override func viewDidAppear(_ animated: Bool) {
         super.viewWillAppear(true)
         updateCachedAssets()
+    }
+    
+    func updateSelectionCount() {
+        doneBtnItem.title = selectedImages.count != 0 ? "Done(\(selectedImages.count))" : "Done"
     }
 
     @IBAction func doneSelection(_ sender: Any) {
@@ -109,13 +110,20 @@ class GridViewController: UICollectionViewController {
     }
 
     override func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        //let cell = collectionView.dequeueReusableCell(withReuseIdentifier: reuseIdentifier, for: indexPath)
         let asset = fetchResult.object(at: indexPath.row)
         
         guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "GridViewCell", for: indexPath) as? GridViewCell else { fatalError("Unexpected cell in collection view") }
     
         if asset.mediaSubtypes.contains(.photoLive) {
             cell.livePhotoBadgeUpdate = PHLivePhotoView.livePhotoBadgeImage(options: .overContent)
+        }
+                
+        let results = selectedImages.filter { el in el.localIdentifier == asset.localIdentifier }
+        if results.count > 0 {
+            cell.layer.borderWidth = 5
+            cell.layer.borderColor = UIColor.red.cgColor
+        } else {
+            cell.layer.borderWidth = 0
         }
         
         cell.representedAssetIdentifier = asset.localIdentifier
@@ -126,6 +134,27 @@ class GridViewController: UICollectionViewController {
         })
         return cell
     }
+    
+    override func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+
+        let selectedCell : UICollectionViewCell = collectionView.cellForItem(at: indexPath)!
+
+        selectedCell.layer.borderWidth = 5
+        selectedCell.layer.borderColor = UIColor.red.cgColor
+        
+        selectedImages.append(fetchResult.object(at: indexPath.row))
+        updateSelectionCount()
+    }
+
+    override func collectionView(_ collectionView: UICollectionView, didDeselectItemAt indexPath: IndexPath) {
+        let unselectedCell : UICollectionViewCell = collectionView.cellForItem(at: indexPath)!
+
+        unselectedCell.layer.borderWidth = 0
+        selectedImages = selectedImages.filter() { $0 !== fetchResult.object(at: indexPath.row) }
+        updateSelectionCount()
+    }
+    
+    
 
     // MARK: UICollectionViewDelegate
 

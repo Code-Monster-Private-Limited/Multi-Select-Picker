@@ -38,12 +38,18 @@ class ViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        self.photoListTable.dataSource = self
+        photoListTable.dataSource = self
         fetchingPhotoOptions()
-        
         photoAblumAuthorizationStatus()
-        
         PHPhotoLibrary.shared().register(self)
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(true)
+        
+        if let indexPath = photoListTable.indexPathForSelectedRow {
+            photoListTable.deselectRow(at: indexPath, animated: true)
+        }
     }
     
     deinit {
